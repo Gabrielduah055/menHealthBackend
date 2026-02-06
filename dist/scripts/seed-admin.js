@@ -16,6 +16,9 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const AdminUser_1 = __importDefault(require("../src/models/AdminUser"));
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/878f4f3b-cbb0-40d7-8e65-1ddb684cc19e', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'mensHealthBackend/scripts/seed-admin.ts:4', message: 'Seed script starting', data: {}, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'seed-script' }) }).catch(() => { });
+// #endregion
 dotenv_1.default.config();
 const seedAdmin = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
