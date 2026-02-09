@@ -35,7 +35,12 @@ export const getAdminBlogs = asyncHandler(async (req: Request, res: Response) =>
 // @route   POST /api/admin/blogs
 // @access  Private/Admin
 export const createBlog = asyncHandler(async (req: Request, res: Response) => {
-  const { title, slug, content, excerpt, coverImageUrl, tags } = req.body;
+  const { title, slug, content, excerpt, tags } = req.body;
+  let coverImageUrl = req.body.coverImageUrl;
+
+  if (req.file) {
+    coverImageUrl = req.file.path;
+  }
 
   const blogExists = await BlogPost.findOne({ slug });
   if (blogExists) {
@@ -72,8 +77,15 @@ export const updateBlog = asyncHandler(async (req: Request, res: Response) => {
     blog.slug = req.body.slug || blog.slug;
     blog.content = req.body.content || blog.content;
     blog.excerpt = req.body.excerpt || blog.excerpt;
-    blog.coverImageUrl = req.body.coverImageUrl || blog.coverImageUrl;
     blog.tags = req.body.tags || blog.tags;
+
+    if (req.body.coverImageUrl) {
+        blog.coverImageUrl = req.body.coverImageUrl;
+    }
+
+    if (req.file) {
+      blog.coverImageUrl = req.file.path;
+    }
 
     const updatedBlog = await blog.save();
     res.json(updatedBlog);
