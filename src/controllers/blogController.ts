@@ -23,6 +23,21 @@ export const getPublicBlogBySlug = asyncHandler(async (req: Request, res: Respon
   }
 });
 
+// @desc    Increment blog view count
+// @route   POST /api/blogs/:id/view
+// @access  Public
+export const incrementBlogView = asyncHandler(async (req: Request, res: Response) => {
+  const blog = await BlogPost.findById(req.params.id);
+  if (blog) {
+    blog.views = (blog.views || 0) + 1;
+    await blog.save();
+    res.json({ views: blog.views });
+  } else {
+    res.status(404);
+    throw new Error('Blog post not found');
+  }
+});
+
 // @desc    Get all blogs (admin)
 // @route   GET /api/admin/blogs
 // @access  Private/Admin
@@ -35,7 +50,7 @@ export const getAdminBlogs = asyncHandler(async (req: Request, res: Response) =>
 // @route   POST /api/admin/blogs
 // @access  Private/Admin
 export const createBlog = asyncHandler(async (req: Request, res: Response) => {
-  const { title, slug, content, excerpt, tags } = req.body;
+  const { title, slug, content, excerpt, tags, category, allowComments } = req.body;
   let coverImageUrl = req.body.coverImageUrl;
 
   if (req.file) {
@@ -55,6 +70,8 @@ export const createBlog = asyncHandler(async (req: Request, res: Response) => {
     excerpt,
     coverImageUrl,
     tags,
+    category,
+    allowComments: allowComments === 'true' || allowComments === true,
     status: 'draft',
   });
 
@@ -78,6 +95,9 @@ export const updateBlog = asyncHandler(async (req: Request, res: Response) => {
     blog.content = req.body.content || blog.content;
     blog.excerpt = req.body.excerpt || blog.excerpt;
     blog.tags = req.body.tags || blog.tags;
+    
+    if (req.body.category) blog.category = req.body.category;
+    if (req.body.allowComments !== undefined) blog.allowComments = req.body.allowComments === 'true' || req.body.allowComments === true;
 
     if (req.body.coverImageUrl) {
         blog.coverImageUrl = req.body.coverImageUrl;
