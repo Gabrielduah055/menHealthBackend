@@ -207,3 +207,27 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
     throw new Error('Order not found');
   }
 });
+
+// @desc    Get aggregated customers from orders (admin)
+// @route   GET /api/admin/orders/customers
+// @access  Private/Admin
+export const getAdminCustomers = asyncHandler(async (req: Request, res: Response) => {
+  const customers = await Order.aggregate([
+    {
+      $group: {
+        _id: '$customer.email',
+        name: { $first: '$customer.name' },
+        email: { $first: '$customer.email' },
+        phone: { $first: '$customer.phone' },
+        location: { $first: '$customer.address' },
+        joinDate: { $min: '$createdAt' },
+        totalOrders: { $sum: 1 },
+        totalSpend: { $sum: '$totalAmount' },
+        lastOrderDate: { $max: '$createdAt' }
+      }
+    },
+    { $sort: { lastOrderDate: -1 } }
+  ]);
+  
+  res.json(customers);
+});

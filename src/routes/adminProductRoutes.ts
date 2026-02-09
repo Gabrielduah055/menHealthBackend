@@ -6,6 +6,7 @@ import {
   toggleProductActive,
 } from '../controllers/productController';
 import { protect, requireAdmin } from '../middleware/auth';
+import upload from '../middleware/uploadMiddleware';
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ router.use(requireAdmin);
 
 router.route('/')
   .get(getAdminProducts)
-  .post(createProduct);
+  .post(upload.array('images', 5), createProduct);
 
-router.put('/:id', updateProduct);
+router.put('/:id', upload.array('images', 5), updateProduct);
 router.patch('/:id/toggle', toggleProductActive);
 
 export default router;
