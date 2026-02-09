@@ -10,6 +10,7 @@ import adminProductRoutes from './routes/adminProductRoutes';
 import orderRoutes from './routes/orderRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import adminOrderRoutes from './routes/adminOrderRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/admin/products', adminProductRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin/orders', adminOrderRoutes);
+app.use('/api/admin/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running...');
