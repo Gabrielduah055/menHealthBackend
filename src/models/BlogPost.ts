@@ -8,6 +8,9 @@ export interface IBlogPost extends Document {
   content: string;
   status: 'draft' | 'published';
   tags: string[];
+  category: mongoose.Schema.Types.ObjectId;
+  views: number;
+  allowComments: boolean;
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

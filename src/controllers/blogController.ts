@@ -50,7 +50,7 @@ export const getAdminBlogs = asyncHandler(async (req: Request, res: Response) =>
 // @route   POST /api/admin/blogs
 // @access  Private/Admin
 export const createBlog = asyncHandler(async (req: Request, res: Response) => {
-  const { title, slug, content, excerpt, tags, category, allowComments } = req.body;
+  const { title, slug, content, excerpt, tags, category, allowComments, status } = req.body;
   let coverImageUrl = req.body.coverImageUrl;
 
   if (req.file) {
@@ -63,6 +63,8 @@ export const createBlog = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('Blog with this slug already exists');
   }
 
+  const normalizedStatus = status === 'published' ? 'published' : 'draft';
+
   const blog = await BlogPost.create({
     title,
     slug,
@@ -72,7 +74,8 @@ export const createBlog = asyncHandler(async (req: Request, res: Response) => {
     tags,
     category,
     allowComments: allowComments === 'true' || allowComments === true,
-    status: 'draft',
+    status: normalizedStatus,
+    publishedAt: normalizedStatus === 'published' ? new Date() : null,
   });
 
   if (blog) {
