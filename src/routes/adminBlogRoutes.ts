@@ -1,8 +1,10 @@
 import express from 'express';
 import {
   getAdminBlogs,
+  getAdminBlogById,
   createBlog,
   updateBlog,
+  deleteBlog,
   publishBlog,
   unpublishBlog,
 } from '../controllers/blogController';
@@ -18,7 +20,11 @@ router.route('/')
   .get(getAdminBlogs)
   .post(upload.single('coverImage'), createBlog);
 
-router.put('/:id', upload.single('coverImage'), updateBlog);
+router.route('/:id')
+  .get(getAdminBlogById)
+  .put(upload.single('coverImage'), updateBlog)
+  .delete(deleteBlog);
+
 router.patch('/:id/publish', publishBlog);
 router.patch('/:id/unpublish', unpublishBlog);
 
