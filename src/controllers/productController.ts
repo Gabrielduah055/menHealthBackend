@@ -31,6 +31,19 @@ export const getAdminProducts = asyncHandler(async (req: Request, res: Response)
   res.json(products);
 });
 
+// @desc    Get product by ID (admin)
+// @route   GET /api/admin/products/:id
+// @access  Private/Admin
+export const getAdminProductById = asyncHandler(async (req: Request, res: Response) => {
+  const product = await Product.findById(req.params.id);
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+});
+
 // @desc    Create a product
 // @route   POST /api/admin/products
 // @access  Private/Admin
