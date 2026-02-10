@@ -46,6 +46,19 @@ export const getAdminBlogs = asyncHandler(async (req: Request, res: Response) =>
   res.json(blogs);
 });
 
+// @desc    Get blog by ID (admin)
+// @route   GET /api/admin/blogs/:id
+// @access  Private/Admin
+export const getAdminBlogById = asyncHandler(async (req: Request, res: Response) => {
+  const blog = await BlogPost.findById(req.params.id);
+  if (blog) {
+    res.json(blog);
+  } else {
+    res.status(404);
+    throw new Error('Blog post not found');
+  }
+});
+
 // @desc    Create a blog post
 // @route   POST /api/admin/blogs
 // @access  Private/Admin
@@ -146,6 +159,20 @@ export const unpublishBlog = asyncHandler(async (req: Request, res: Response) =>
     blog.publishedAt = null;
     const updatedBlog = await blog.save();
     res.json(updatedBlog);
+  } else {
+    res.status(404);
+    throw new Error('Blog post not found');
+  }
+});
+
+// @desc    Delete blog by ID (admin)
+// @route   DELETE /api/admin/blogs/:id
+// @access  Private/Admin
+export const deleteBlog = asyncHandler(async (req: Request, res: Response) => {
+  const blog = await BlogPost.findById(req.params.id);
+  if (blog) {
+    await blog.deleteOne();
+    res.json({ message: 'Blog post removed' });
   } else {
     res.status(404);
     throw new Error('Blog post not found');
