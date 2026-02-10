@@ -2,6 +2,15 @@ import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import Product from '../models/Product';
 
+const MAX_PRODUCT_IMAGES = 4;
+
+const toArray = (value: unknown): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string');
+  if (typeof value === 'string') return value ? [value] : [];
+  return [];
+};
+
 // @desc    Get active products
 // @route   GET /api/products
 // @access  Public
@@ -49,12 +58,22 @@ export const getAdminProductById = asyncHandler(async (req: Request, res: Respon
 // @access  Private/Admin
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   const { name, slug, description, price, stockQty } = req.body;
-  let images = req.body.images || [];
+  let images = toArray(req.body.images);
 
   const files = req.files as Express.Multer.File[];
   if (files && files.length > 0) {
     const uploadedImages = files.map((file) => file.path);
-    images = Array.isArray(images) ? [...images, ...uploadedImages] : [...(images ? [images] : []), ...uploadedImages];
+    images = [...images, ...uploadedImages];
+  }
+
+  if (images.length === 0) {
+    res.status(400);
+    throw new Error('Main product image is required');
+  }
+
+  if (images.length > MAX_PRODUCT_IMAGES) {
+    res.status(400);
+    throw new Error('A product can have at most 4 images (1 main + up to 3 thumbnails)');
   }
 
   const productExists = await Product.findOne({ slug });
@@ -95,9 +114,10 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
     product.stockQty = req.body.stockQty !== undefined ? req.body.stockQty : product.stockQty;
 
     // Handle existing images passed as strings (if any)
-    if (req.body.images) {
-        // If the user sends an array of existing image URLs they want to keep
-        product.images = Array.isArray(req.body.images) ? req.body.images : [req.body.images];
+    if (req.body.images !== undefined) {
+      // If the user sends image URLs they want to keep, preserve this exact order:
+      // first image = main image, remaining = thumbnails.
+      product.images = toArray(req.body.images);
     }
 
     // Handle new file uploads
@@ -106,6 +126,16 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
       const newImages = files.map((file) => file.path);
       // Append new images to existing ones (or the ones reset above)
       product.images = [...product.images, ...newImages];
+    }
+
+    if (product.images.length === 0) {
+      res.status(400);
+      throw new Error('Main product image is required');
+    }
+
+    if (product.images.length > MAX_PRODUCT_IMAGES) {
+      res.status(400);
+      throw new Error('A product can have at most 4 images (1 main + up to 3 thumbnails)');
     }
 
     const updatedProduct = await product.save();
