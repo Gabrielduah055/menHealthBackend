@@ -5,6 +5,8 @@ export interface IAdminUser extends Document {
   email: string;
   passwordHash: string;
   role: 'admin';
+  authorRole?: string;
+  avatarLabel?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -16,6 +18,8 @@ const adminUserSchema = new Schema<IAdminUser>(
     email: { type: String, required: true, unique: true },
     passwordHash: { type: String, required: true },
     role: { type: String, default: 'admin' },
+    authorRole: { type: String, default: 'Administrator' },
+    avatarLabel: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
