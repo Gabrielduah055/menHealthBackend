@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
 import BlogPost from '../models/BlogPost';
+import Category from '../models/Category';
 import { parseBlogHtml } from '../utils/blogParser';
 
 const parseBoolean = (value: unknown) => value === 'true' || value === true;
@@ -103,7 +105,22 @@ const normalizeTopics = (topics?: string[], tags?: string[]) => {
 // @route   GET /api/blogs
 // @access  Public
 export const getPublicBlogs = asyncHandler(async (req: Request, res: Response) => {
-  const blogs = await BlogPost.find({ status: 'published' })
+  const { category } = req.query as { category?: string };
+  const filter: Record<string, unknown> = { status: 'published' };
+
+  if (category) {
+    const categoryQuery = mongoose.isValidObjectId(category)
+      ? { $or: [{ slug: category }, { _id: category }] }
+      : { slug: category };
+    const categoryDoc = await Category.findOne(categoryQuery);
+    if (!categoryDoc) {
+      res.json([]);
+      return;
+    }
+    filter.category = categoryDoc._id;
+  }
+
+  const blogs = await BlogPost.find(filter)
     .populate('category', 'name slug')
     .sort({ publishedAt: -1 });
   res.json(blogs);
@@ -113,10 +130,18 @@ export const getPublicBlogs = asyncHandler(async (req: Request, res: Response) =
 // @route   GET /api/blogs/:slug
 // @access  Public
 export const getPublicBlogBySlug = asyncHandler(async (req: Request, res: Response) => {
-  const blog = await BlogPost.findOne({ slug: req.params.slug, status: 'published' }).populate(
+  const slugOrId = req.params.slug;
+  let blog = await BlogPost.findOne({ slug: slugOrId, status: 'published' }).populate(
     'category',
     'name slug'
   );
+
+  if (!blog && mongoose.isValidObjectId(slugOrId)) {
+    blog = await BlogPost.findOne({ _id: slugOrId, status: 'published' }).populate(
+      'category',
+      'name slug'
+    );
+  }
   if (blog) {
     res.json(blog);
   } else {
