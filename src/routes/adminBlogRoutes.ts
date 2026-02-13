@@ -18,11 +18,23 @@ router.use(requireAdmin);
 
 router.route('/')
   .get(getAdminBlogs)
-  .post(upload.single('coverImage'), createBlog);
+  .post(
+    upload.fields([
+      { name: 'coverImage', maxCount: 1 },
+      { name: 'galleryImages', maxCount: 8 }
+    ]),
+    createBlog
+  );
 
 router.route('/:id')
   .get(getAdminBlogById)
-  .put(upload.single('coverImage'), updateBlog)
+  .put(
+    upload.fields([
+      { name: 'coverImage', maxCount: 1 },
+      { name: 'galleryImages', maxCount: 8 }
+    ]),
+    updateBlog
+  )
   .delete(deleteBlog);
 
 router.patch('/:id/publish', publishBlog);
