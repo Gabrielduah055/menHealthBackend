@@ -32,6 +32,8 @@ export const loginAdmin = asyncHandler(async (req: Request, res: Response) => {
       name: admin.name,
       email: admin.email,
       role: admin.role,
+      authorRole: admin.authorRole,
+      avatarLabel: admin.avatarLabel,
       token: generateToken(admin._id.toString()),
     });
   } else {
