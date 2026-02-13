@@ -1,4 +1,6 @@
-import cheerio from 'cheerio';
+
+import {load} from 'cheerio';
+
 
 export type ParsedBlogContent = {
   sections: { title: string; body: string }[];
@@ -28,7 +30,7 @@ const buildReadTime = (text: string) => {
 };
 
 export const parseBlogHtml = (html: string): ParsedBlogContent => {
-  const $ = cheerio.load(html || '');
+  const $ = load(html || '');
   const fullText = normalizeText($.text());
 
   const headings = $('h1, h2, h3').toArray();
