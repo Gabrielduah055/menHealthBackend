@@ -20,15 +20,15 @@ const productSchema = new Schema<IProduct>(
     description: { type: String },
     price: { type: Number, required: true },
     stockQty: { type: Number, required: true, default: 0 },
-    images: [{
-      type: String,
+    images: {
+      type: [String],
       validate: {
         validator: function (images: string[]) {
           return !images || images.length <= 4;
         },
         message: 'A product can have at most 4 images (1 main + up to 3 thumbnails).',
       },
-    }],
+    },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
