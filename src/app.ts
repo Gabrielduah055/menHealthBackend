@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler } from './middleware/error';
 import authRoutes from './routes/authRoutes';
+import userAuthRoutes from './routes/userAuthRoutes';
 import blogRoutes from './routes/blogRoutes';
 import adminBlogRoutes from './routes/adminBlogRoutes';
 import productRoutes from './routes/productRoutes';
@@ -24,9 +25,10 @@ app.use(express.json());
 
 // Routes
 app.use('/api/admin/auth', authRoutes);
+app.use('/api/auth', userAuthRoutes);
 app.use('/api/blogs', blogRoutes);
 // Mount comment routes on blogs for cleaner API structure if desired, or separate
-app.use('/api/blogs/:id/comments', commentRoutes); 
+app.use('/api/blogs/:id/comments', commentRoutes);
 app.use('/api/admin/blogs', adminBlogRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin/products', adminProductRoutes);
