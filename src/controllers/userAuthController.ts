@@ -1,10 +1,10 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailService';
-import transporter from '../config/nodemailer';
 
 const generateToken = (id: string): string => {
     return jwt.sign({ id, role: 'user' }, process.env.JWT_SECRET || 'fallback', {
@@ -13,7 +13,7 @@ const generateToken = (id: string): string => {
 };
 
 const generateCode = (): string => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return crypto.randomInt(100000, 1000000).toString();
 };
 
 // POST /api/auth/register
@@ -48,16 +48,6 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
         verificationCodeExpires,
     });
 
-    const mailOptions = {
-        from: process.env.SMTP_EMAIL,
-        to: user.email,
-        subject: 'Verify Your Email',
-        text: `Your verification code is: ${verificationCode}`,
-    }
-
-    await transporter.sendMail(mailOptions);
-
-    // Send verification email
     try {
         await sendVerificationEmail(user.email, verificationCode);
     } catch (err) {
