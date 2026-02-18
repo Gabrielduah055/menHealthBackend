@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailService';
+import transporter from '../config/nodemailer';
 
 const generateToken = (id: string): string => {
     return jwt.sign({ id, role: 'user' }, process.env.JWT_SECRET || 'fallback', {
@@ -46,6 +47,15 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
         verificationCode,
         verificationCodeExpires,
     });
+
+    const mailOptions = {
+        from: process.env.SMTP_EMAIL,
+        to: user.email,
+        subject: 'Verify Your Email',
+        text: `Your verification code is: ${verificationCode}`,
+    }
+
+    await transporter.sendMail(mailOptions);
 
     // Send verification email
     try {
