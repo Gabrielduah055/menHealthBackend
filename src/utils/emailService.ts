@@ -1,11 +1,27 @@
-import transporter from '../config/nodemailer';
+import axios from 'axios';
+
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+
+const sendEmail = async (to: string, subject: string, html: string): Promise<void> => {
+    await axios.post(
+        BREVO_API_URL,
+        {
+            sender: { name: 'HealthPulse', email: process.env.SMTP_EMAIL },
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+        },
+        {
+            headers: {
+                'api-key': process.env.BREVO_API_KEY,
+                'Content-Type': 'application/json',
+            },
+        }
+    );
+};
 
 export const sendVerificationEmail = async (to: string, code: string): Promise<void> => {
-    const mailOptions = {
-        from: `"HealthPulse" <${process.env.SMTP_EMAIL}>`,
-        to,
-        subject: 'Verify Your HealthPulse Account',
-        html: `
+    const html = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h1 style="color: #7c3aed; font-size: 24px; margin: 0;">HealthPulse</h1>
@@ -17,18 +33,12 @@ export const sendVerificationEmail = async (to: string, code: string): Promise<v
         </div>
         <p style="color: #94a3b8; text-align: center; font-size: 12px;">This code expires in 10 minutes. If you didn't create an account, please ignore this email.</p>
       </div>
-    `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    `;
+    await sendEmail(to, 'Verify Your HealthPulse Account', html);
 };
 
 export const sendPasswordResetEmail = async (to: string, code: string): Promise<void> => {
-    const mailOptions = {
-        from: `"HealthPulse" <${process.env.SMTP_EMAIL}>`,
-        to,
-        subject: 'Reset Your HealthPulse Password',
-        html: `
+    const html = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h1 style="color: #7c3aed; font-size: 24px; margin: 0;">HealthPulse</h1>
@@ -40,8 +50,6 @@ export const sendPasswordResetEmail = async (to: string, code: string): Promise<
         </div>
         <p style="color: #94a3b8; text-align: center; font-size: 12px;">This code expires in 10 minutes. If you didn't request a password reset, please ignore this email.</p>
       </div>
-    `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    `;
+    await sendEmail(to, 'Reset Your HealthPulse Password', html);
 };
