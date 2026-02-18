@@ -16,6 +16,7 @@ export interface IOrderPayment {
 }
 
 export interface IOrder extends Document {
+  userId?: mongoose.Types.ObjectId;
   customer: {
     name: string;
     email: string;
@@ -32,6 +33,7 @@ export interface IOrder extends Document {
 
 const orderSchema = new Schema<IOrder>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
     customer: {
       name: { type: String, required: true },
       email: { type: String, required: true },
