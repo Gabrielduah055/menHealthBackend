@@ -1,23 +1,22 @@
-import axios from 'axios';
-
-const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+import { BrevoError, BrevoTimeoutError } from '@getbrevo/brevo';
+import brevo from '../config/brevo.config';
 
 const sendEmail = async (to: string, subject: string, html: string): Promise<void> => {
-    await axios.post(
-        BREVO_API_URL,
-        {
+    try {
+        await brevo.transactionalEmails.sendTransacEmail({
             sender: { name: 'HealthPulse', email: process.env.SMTP_EMAIL },
             to: [{ email: to }],
             subject,
             htmlContent: html,
-        },
-        {
-            headers: {
-                'api-key': process.env.BREVO_API_KEY,
-                'Content-Type': 'application/json',
-            },
+        });
+    } catch (err) {
+        if (err instanceof BrevoTimeoutError) {
+            console.error('Brevo: Request timed out');
+        } else if (err instanceof BrevoError) {
+            console.error(`Brevo API error ${err.statusCode}:`, err.message);
         }
-    );
+        throw err;
+    }
 };
 
 export const sendVerificationEmail = async (to: string, code: string): Promise<void> => {
