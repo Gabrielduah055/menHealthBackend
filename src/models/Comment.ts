@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import crypto from 'crypto';
 
 export interface IComment extends Document {
   postId: mongoose.Types.ObjectId;
@@ -7,6 +8,8 @@ export interface IComment extends Document {
   email: string;
   content: string;
   isApproved: boolean;
+  shareToken: string;
+  shareCount: number;
   replies: {
     name: string;
     content: string;
@@ -24,6 +27,12 @@ const commentSchema = new Schema<IComment>(
     email: { type: String, required: true },
     content: { type: String, required: true },
     isApproved: { type: Boolean, default: false },
+    shareToken: {
+      type: String,
+      unique: true,
+      default: () => crypto.randomBytes(16).toString('hex'),
+    },
+    shareCount: { type: Number, default: 0 },
     replies: [
       {
         name: { type: String, required: true },
@@ -34,5 +43,8 @@ const commentSchema = new Schema<IComment>(
   },
   { timestamps: true }
 );
+
+commentSchema.index({ postId: 1, createdAt: -1 });
+commentSchema.index({ userId: 1, postId: 1 });
 
 export default mongoose.model<IComment>('Comment', commentSchema);
