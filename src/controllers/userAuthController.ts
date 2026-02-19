@@ -6,6 +6,19 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailService';
 
+interface PendingRegistration {
+    fullName: string;
+    email: string;
+    passwordHash: string;
+    phone: string;
+    dateOfBirth?: string;
+    location: string;
+    code: string;
+    expires: Date;
+}
+
+const pendingRegistrations = new Map<string, PendingRegistration>();
+
 const generateToken = (id: string): string => {
     return jwt.sign({ id, role: 'user' }, process.env.JWT_SECRET || 'fallback', {
         expiresIn: '30d',
@@ -25,7 +38,9 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
         throw new Error('Full name, email, and password are required.');
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase();
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
         res.status(400);
         throw new Error('An account with this email already exists.');
@@ -34,29 +49,32 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const verificationCode = generateCode();
-    const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const code = generateCode();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-    const user = await User.create({
+    pendingRegistrations.set(normalizedEmail, {
         fullName,
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         passwordHash,
         phone: phone || '',
         dateOfBirth: dateOfBirth || undefined,
         location: location || '',
-        verificationCode,
-        verificationCodeExpires,
+        code,
+        expires,
     });
 
     try {
-        await sendVerificationEmail(user.email, verificationCode);
+        await sendVerificationEmail(normalizedEmail, code);
     } catch (err) {
+        pendingRegistrations.delete(normalizedEmail);
         console.error('Failed to send verification email:', err);
+        res.status(502);
+        throw new Error('Failed to send verification email. Please try again.');
     }
 
-    res.status(201).json({
-        message: 'Account created. Please check your email for the verification code.',
-        email: user.email,
+    res.status(200).json({
+        message: 'Verification code sent. Please check your email.',
+        email: normalizedEmail,
     });
 });
 
@@ -69,43 +87,82 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
         throw new Error('Email and verification code are required.');
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-        res.status(404);
-        throw new Error('User not found.');
+    const normalizedEmail = email.toLowerCase();
+
+    const pending = pendingRegistrations.get(normalizedEmail);
+
+    if (pending) {
+        if (pending.code !== code || pending.expires < new Date()) {
+            res.status(400);
+            throw new Error('Invalid or expired verification code.');
+        }
+
+        const user = await User.create({
+            fullName: pending.fullName,
+            email: pending.email,
+            passwordHash: pending.passwordHash,
+            phone: pending.phone,
+            dateOfBirth: pending.dateOfBirth || undefined,
+            location: pending.location,
+            isVerified: true,
+        });
+
+        pendingRegistrations.delete(normalizedEmail);
+
+        const token = generateToken(user._id.toString());
+
+        res.status(201).json({
+            message: 'Email verified. Account created successfully.',
+            token,
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                email: user.email,
+                phone: user.phone,
+                profilePhoto: user.profilePhoto,
+                isVerified: user.isVerified,
+            },
+        });
+        return;
     }
 
-    if (user.isVerified) {
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (!existingUser) {
+        res.status(404);
+        throw new Error('No pending registration found for this email. Please register again.');
+    }
+
+    if (existingUser.isVerified) {
         res.status(400);
         throw new Error('Email is already verified.');
     }
 
     if (
-        user.verificationCode !== code ||
-        !user.verificationCodeExpires ||
-        user.verificationCodeExpires < new Date()
+        existingUser.verificationCode !== code ||
+        !existingUser.verificationCodeExpires ||
+        existingUser.verificationCodeExpires < new Date()
     ) {
         res.status(400);
         throw new Error('Invalid or expired verification code.');
     }
 
-    user.isVerified = true;
-    user.verificationCode = undefined;
-    user.verificationCodeExpires = undefined;
-    await user.save();
+    existingUser.isVerified = true;
+    existingUser.verificationCode = undefined;
+    existingUser.verificationCodeExpires = undefined;
+    await existingUser.save();
 
-    const token = generateToken(user._id.toString());
+    const token = generateToken(existingUser._id.toString());
 
     res.json({
         message: 'Email verified successfully.',
         token,
         user: {
-            _id: user._id,
-            fullName: user.fullName,
-            email: user.email,
-            phone: user.phone,
-            profilePhoto: user.profilePhoto,
-            isVerified: user.isVerified,
+            _id: existingUser._id,
+            fullName: existingUser.fullName,
+            email: existingUser.email,
+            phone: existingUser.phone,
+            profilePhoto: existingUser.profilePhoto,
+            isVerified: existingUser.isVerified,
         },
     });
 });
@@ -119,10 +176,30 @@ export const resendCode = asyncHandler(async (req: Request, res: Response) => {
         throw new Error('Email is required.');
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase();
+    const code = generateCode();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    const pending = pendingRegistrations.get(normalizedEmail);
+    if (pending) {
+        pending.code = code;
+        pending.expires = expires;
+        pendingRegistrations.set(normalizedEmail, pending);
+
+        try {
+            await sendVerificationEmail(normalizedEmail, code);
+        } catch (err) {
+            console.error('Failed to resend verification email:', err);
+        }
+
+        res.json({ message: 'Verification code resent. Please check your email.' });
+        return;
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
         res.status(404);
-        throw new Error('User not found.');
+        throw new Error('No registration found for this email.');
     }
 
     if (user.isVerified) {
@@ -130,13 +207,12 @@ export const resendCode = asyncHandler(async (req: Request, res: Response) => {
         throw new Error('Email is already verified.');
     }
 
-    const verificationCode = generateCode();
-    user.verificationCode = verificationCode;
-    user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+    user.verificationCode = code;
+    user.verificationCodeExpires = expires;
     await user.save();
 
     try {
-        await sendVerificationEmail(user.email, verificationCode);
+        await sendVerificationEmail(normalizedEmail, code);
     } catch (err) {
         console.error('Failed to resend verification email:', err);
     }
